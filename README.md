@@ -9,6 +9,3 @@
 -	High scores
 -	How to play
 -	Exit
-
-## 3. Demo clip:
-  [visit here] (copy_link)
