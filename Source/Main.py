@@ -372,7 +372,7 @@ class Snake:
                 food.appear(game, screen)
                 break
             else:  # reducing times to check
-                i += 3
+                i += (1 + int (len(self.part)/10))
         return False
 
     def become_longer(self, game, screen, eat_special):
@@ -402,11 +402,14 @@ class Snake:
     def check_appear_food(self, food, game, screen):
         print('check appear food')
         food.random_food_pos()
-        for i in range(len(self.part)):
+        i = 0
+        while i < len(self.part):
             if self.check_part_collide_food(i, food) == True:
                 print('random again')
                 food.random_food_again(self.range_xy())
                 break
+            else:
+                i+= (1 + int (len(self.part)/10))
         food.appear(game, screen)
 
     def kill(self, game, screen):
@@ -417,15 +420,6 @@ class Snake:
 
     def range_xy(self):
         list_xy = [self.w, self.h, 0, 0]  # saving [x_min, y_min, x_max, y_max]
-        # for p in self.part:
-        #     if p[0] < list_xy[0]:  # x < x_min
-        #         list_xy[0] = p[0]
-        #     elif p[0] > list_xy[2]:  # x > x_max
-        #         list_xy[2] = p[0]
-        #     if p[1] < list_xy[1]:  # y < y_min
-        #         list_xy[1] = p[1]
-        #     elif p[1] > list_xy[3]:  # y > y_max
-        #         list_xy[3] = p[1]
         i = 0
         while i < len(self.part):
             if self.part[i][0] < list_xy[0]:
@@ -436,7 +430,7 @@ class Snake:
                 list_xy[1] = self.part[i][1]
             elif self.part[i][1] > list_xy[3]:  # y > y_max
                 list_xy[3] = self.part[i][1]
-            i+= int(len(self.part)/10) # decrease times checking  
+            i+= (1 + int(len(self.part)/10)) # decrease times checking  
             
         return list_xy
 
@@ -589,7 +583,8 @@ class Game:
                     elif event.key == pygame.K_DOWN:
                         if snake.head_d != 2:
                             snake.head_d = 3
-            sleep(speed[level])
+            if len(snake.part) < 60:
+                sleep(speed[level])
             clock.tick(60)
 
 
