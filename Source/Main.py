@@ -5,7 +5,7 @@ import random
 from re import S
 from time import sleep
 import pygame
-from sympy import false
+from sympy import false, li
 from pygame import mixer
 pygame.init()
 mixer.init()
@@ -111,10 +111,33 @@ class Food:
         while (self.pos == [-1, -1]):
             new_x = random.randint(2 * self.len, self.w - 2*self.len)
             new_y = random.randint(2 * self.len, self.h - 2*self.len)
-            if (new_x != self.pos[0] or new_y != self.pos[1]):  # new pos != old pos
+            # new pos != old pos
+            if (new_x != self.pos[0] or new_y != self.pos[1]):
                 self.pos = [new_x, new_y]
-        return self.pos   
+
+    # when random pos in snake area
+    def random_food_again(self, list_xy):
+        # not appear in snake area
+        x_min = list_xy[0] - self.len
+        y_min = list_xy[1] - self.len
+        x_max = list_xy[2] + self.len
+        y_max = list_xy[3] + self.len
         
+        # (x < x_min | x > x_max) ; (y < y_min | y > y_max)
+        list_range_x = [[2 * self.len, x_min-1], [x_max+1, self.w - 2*self.len]]
+        list_range_y = [[2 * self.len, y_min-1], [y_max+1, self.h - 2*self.len]]
+        try:
+            try:
+                self.pos[0] = random.randint(list_range_x[0][0], list_range_x[0][1])
+            except:
+                self.pos[0] = random.randint(list_range_x[1][0], list_range_x[1][1])
+            try:
+                self.pos[1] = random.randint(list_range_y[0][0], list_range_y[0][1])
+            except:
+                self.pos[0] = random.randint(list_range_y[1][0], list_range_y[1][1])
+        except: # now, snake will be very tall !!!!
+            pass
+
     def appear(self, game, screen):  # after check with the snake pos
         if self.color[1] > 0:
             self.len = 20
@@ -341,12 +364,15 @@ class Snake:
         check = self.check_part_collide_food(0, food)
         if check == True:
             return True
-
         # check if exists other snake PARTS collide to the food:
-        for i in range(1, len(self.part)):
+        i = 0
+        while i < len(self.part):
             check = self.check_part_collide_food(i, food)
             if check == True:
                 food.appear(game, screen)
+                break
+            else:  # reducing times to check
+                i += 3
         return False
 
     def become_longer(self, game, screen, eat_special):
@@ -375,27 +401,44 @@ class Snake:
 
     def check_appear_food(self, food, game, screen):
         print('check appear food')
-        check = True
-        print('random food pos')
         food.random_food_pos()
-        while(1):
-            for i in range(len(self.part)):
-                if self.check_part_collide_food(i, food) == True:
-                    check = False
-                    food.pos = [-1, -1]
-                    food.color = red
-                    print('random food pos')
-                    food.random_food_pos()
-                    break
-            if (check == True):
-                food.appear(game, screen)
+        for i in range(len(self.part)):
+            if self.check_part_collide_food(i, food) == True:
+                print('random again')
+                food.random_food_again(self.range_xy())
                 break
+        food.appear(game, screen)
 
     def kill(self, game, screen):
         for i in range(1, len(self.part)):
             if (self.part[0] == self.part[i]):
                 return True
         return False
+
+    def range_xy(self):
+        list_xy = [self.w, self.h, 0, 0]  # saving [x_min, y_min, x_max, y_max]
+        # for p in self.part:
+        #     if p[0] < list_xy[0]:  # x < x_min
+        #         list_xy[0] = p[0]
+        #     elif p[0] > list_xy[2]:  # x > x_max
+        #         list_xy[2] = p[0]
+        #     if p[1] < list_xy[1]:  # y < y_min
+        #         list_xy[1] = p[1]
+        #     elif p[1] > list_xy[3]:  # y > y_max
+        #         list_xy[3] = p[1]
+        i = 0
+        while i < len(self.part):
+            if self.part[i][0] < list_xy[0]:
+                list_xy[0] = self.part[i][0]
+            elif self.part[i][0] > list_xy[2]:  # x > x_max
+                list_xy[2] = self.part[i][0]
+            if self.part[i][1] < list_xy[1]:  # y < y_min
+                list_xy[1] = self.part[i][1]
+            elif self.part[i][1] > list_xy[3]:  # y > y_max
+                list_xy[3] = self.part[i][1]
+            i+= int(len(self.part)/10) # decrease times checking  
+            
+        return list_xy
 
 
 class Game:
@@ -474,7 +517,7 @@ class Game:
             data.append(food.color)
             json.dump(data, f)
         self.save_high_score()
-        
+
     def save_high_score(self):
         # load from file
         try:
