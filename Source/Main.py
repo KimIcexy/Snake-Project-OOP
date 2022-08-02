@@ -434,8 +434,7 @@ class Game:
         pygame.display.update()
 
     def update_eat(self, snake, food, screen, on_music):
-        #is_special = (divmod(self.counter, 3)[1] == 0 and self.counter != 0)
-        is_special = True
+        is_special = (divmod(self.counter, 3)[1] == 0 and self.counter != 0)
         if(snake.check_eating(self, screen, food) == True):
             food.disappear(self, screen)
             if on_music == 1:
