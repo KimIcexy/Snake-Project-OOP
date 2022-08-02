@@ -24,7 +24,7 @@ red = [255, 0, 0]
 dark_red = [179, 36, 0]
 color_list1 = [black, brown, dark_red, red]
 color_snake = [[light_green, green], [light_blue, blue], [light_pink, pink]]
-speed = [1/8, 1/16, 1/4]
+speed = [1/16, 1/32, 1/8]
 game_file = "Data/data.json"
 score_file = "Data/score.json"
 max_plus_score = 150
@@ -359,7 +359,6 @@ class Snake:
         return False
 
     def check_eating(self, game, screen, food):
-        print('check eat and collide')
         # check the HEAD:
         check = self.check_part_collide_food(0, food)
         if check == True:
@@ -376,7 +375,6 @@ class Snake:
         return False
 
     def become_longer(self, game, screen, eat_special):
-        print('become longer')
         n_part = 1  # number of new parts added to the snake
         if eat_special == True:
             n_part = plus_part
@@ -400,12 +398,10 @@ class Snake:
             self.add_part(game, screen, new_tail[0], new_tail[1])
 
     def check_appear_food(self, food, game, screen):
-        print('check appear food')
         food.random_food_pos()
         i = 0
         while i < len(self.part):
             if self.check_part_collide_food(i, food) == True:
-                print('random again')
                 food.random_food_again(self.range_xy())
                 break
             else:
@@ -554,7 +550,6 @@ class Game:
         while not quit_game:
             clock = pygame.time.Clock()
             snake.move(self, screen)
-            print('update eat')
             self.update_eat(snake, food, screen, on_music)
             if(snake.kill(self, screen) == True):
                 quit_game = True
