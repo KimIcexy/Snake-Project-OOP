@@ -113,8 +113,8 @@ class Food:
             new_y = random.randint(2 * self.len, self.h - 2*self.len)
             if (new_x != self.pos[0] or new_y != self.pos[1]):  # new pos != old pos
                 self.pos = [new_x, new_y]
-        return self.pos
-
+        return self.pos   
+        
     def appear(self, game, screen):  # after check with the snake pos
         if self.color[1] > 0:
             self.len = 20
@@ -336,6 +336,7 @@ class Snake:
         return False
 
     def check_eating(self, game, screen, food):
+        print('check eat and collide')
         # check the HEAD:
         check = self.check_part_collide_food(0, food)
         if check == True:
@@ -349,6 +350,7 @@ class Snake:
         return False
 
     def become_longer(self, game, screen, eat_special):
+        print('become longer')
         n_part = 1  # number of new parts added to the snake
         if eat_special == True:
             n_part = plus_part
@@ -358,22 +360,23 @@ class Snake:
             new_tail = [0, 0]
             old_size = len(self.part)
             old_tail = self.part[old_size - 1]
-            old_pre_tail = self.part[old_size - 2]
 
             if self.tail_d == 2:  # up
-                new_tail = [old_tail[0], old_tail[1] + self.r]
+                new_tail = [old_tail[0], old_tail[1] + 2*self.r]
             elif self.tail_d == 3:  # down
-                new_tail = [old_tail[0], old_tail[1] - self.r]
+                new_tail = [old_tail[0], old_tail[1] - 2*self.r]
             elif self.tail_d == 1:  # left
-                new_tail = [old_tail[0] + self.r, old_tail[1]]
+                new_tail = [old_tail[0] + 2*self.r, old_tail[1]]
             else:
-                new_tail = [old_tail[0] - self.r, old_tail[1]]
+                new_tail = [old_tail[0] - 2*self.r, old_tail[1]]
 
             # add:
             self.add_part(game, screen, new_tail[0], new_tail[1])
 
     def check_appear_food(self, food, game, screen):
+        print('check appear food')
         check = True
+        print('random food pos')
         food.random_food_pos()
         while(1):
             for i in range(len(self.part)):
@@ -381,6 +384,7 @@ class Snake:
                     check = False
                     food.pos = [-1, -1]
                     food.color = red
+                    print('random food pos')
                     food.random_food_pos()
                     break
             if (check == True):
@@ -430,7 +434,8 @@ class Game:
         pygame.display.update()
 
     def update_eat(self, snake, food, screen, on_music):
-        is_special = (divmod(self.counter, 3)[1] == 0 and self.counter != 0)
+        #is_special = (divmod(self.counter, 3)[1] == 0 and self.counter != 0)
+        is_special = True
         if(snake.check_eating(self, screen, food) == True):
             food.disappear(self, screen)
             if on_music == 1:
@@ -460,7 +465,7 @@ class Game:
                 self.counter = 0  # restore
             snake.check_appear_food(food, self, screen)
 
-    def save_game_data(self, snake, food):
+    def save(self, snake, food):
         with open(game_file, "w") as f:
             data = []
             data.append(deepcopy(snake.part))
@@ -469,24 +474,29 @@ class Game:
             data.append(food.pos)
             data.append(food.color)
             json.dump(data, f)
-
+        self.save_high_score()
+        
     def save_high_score(self):
-        with open(score_file, "r") as f:
-            try:
+        # load from file
+        try:
+            with open(score_file, "r") as f:
                 data = json.load(f)
                 for i in range(len(data)):
                     self.high_score[i] = data[i]
-            except json.JSONDecodeError:
-                pass
-
-        for k in range(len(self.high_score) - 1):
-            if self.score > self.high_score[k]:
-                for i in range(4 - k):  # just save 5 high score
-                    self.high_score[4-i] = self.high_score[4-i-1]
-                self.high_score[k] = self.score
-                break
-        with open(score_file, "w") as f:
-            json.dump(self.high_score, f)
+        # if file does not exists, create new file
+        except:
+            with open(score_file, "w") as f:
+                json.dump([0, 0, 0, 0, 0], f)
+        # rewrite the file
+        finally:
+            for k in range(len(self.high_score) - 1):
+                if self.score > self.high_score[k]:
+                    for i in range(4 - k):  # just save 5 high score
+                        self.high_score[4-i] = self.high_score[4-i-1]
+                    self.high_score[k] = self.score
+                    break
+            with open(score_file, "w") as f:
+                json.dump(self.high_score, f)
 
     def run(self, screen, mode, on_music, color_snake, level):  # mode: 0: NEW, 1: RESUME
         quit_game = False
@@ -508,6 +518,7 @@ class Game:
         while not quit_game:
             clock = pygame.time.Clock()
             snake.move(self, screen)
+            print('update eat')
             self.update_eat(snake, food, screen, on_music)
             if(snake.kill(self, screen) == True):
                 quit_game = True
@@ -520,10 +531,9 @@ class Game:
                 self.save_high_score()
                 sleep(2)
             for event in pygame.event.get():
-                # event: pause, restart
                 if event.type == pygame.QUIT:
                     quit_game = True
-                    self.save_game_data(snake, food)
+                    self.save(snake, food)
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RIGHT:
                         if snake.head_d != 1:  # not change to wrong direction
@@ -633,15 +643,14 @@ class Menu:
     def highscore(self):
         # load 5 highest scores
         high_score = [0, 0, 0, 0, 0]
-        with open(score_file, "r") as f:
-            try:
+        try:
+            with open(score_file, "r") as f:
                 data = json.load(f)
                 for i in range(len(data)):
                     high_score[i] = data[i]
-
-            except json.JSONDecodeError:
-                return
-
+        except:  # create new file
+            with open(score_file, "w") as f:
+                json.dump(high_score, f)
         # show
         w = self.screen.get_width()
         h = self.screen.get_height()
@@ -694,7 +703,7 @@ class Menu:
         Text(board, txt, (x, y+delta*7), 20)
         txt = 'Hope you enjoy this simple game! ^^'
         Text(board, txt, (x, y+delta*8), 20)
-        
+
         self.screen.blit(board, (w / 10, h/10))
         Text(self.screen, 'HOW TO PLAY', (x + 130, y - 25), 65, red)
         pygame.display.update()
