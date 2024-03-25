@@ -155,39 +155,41 @@ class Food:
 
 
 class Snake:
-    def __init__(self, game, screen, mode=0, color=0):  # mode: 0 (new), 1 (resume)
+    DIRECTIONS = {
+        0: (1, 0),  # right
+        1: (-1, 0),  # left
+        2: (0, -1),  # up
+        3: (0, 1)    # down
+    }
+
+    def __init__(self, game, screen, mode=0, color=0):
         self.w = game.board.get_width()
         self.h = game.board.get_height()
         self.r = 10
         self.part = []
-        # direction of head and tail: 0: right, 1: left, 2: up, 3: down
         self.head_d = 0
         self.tail_d = 0
         self.color = color_snake[color]
-        if mode == 0:  # NEW
-            self.default_3 = [self.r, self.h / 2 - self.r]
-            self.default_2 = [self.r*3, self.h / 2 - self.r]
-            self.default_1 = [self.r*5, self.h / 2 - self.r]
-            self.part = [self.default_1, self.default_2, self.default_3]
-        else:  # RESUME
+        if mode == 0:
+            self.initialize_new_snake()
+        else:
             self.load(game)
-        if (len(self.part) < 3):
+        if len(self.part) < 3:
             return
-        self.draw(game, screen, self.color[0],
-                  self.part[0][0], self.part[0][1])
-        for i in range(1, len(self.part)):
-            self.draw(game, screen, self.color[1],
-                      self.part[i][0], self.part[i][1])
-        game.update_screen(screen)
+        self.draw_snake(game, screen)
+
+    def initialize_new_snake(self):
+        self.default_3 = [self.r, self.h / 2 - self.r]
+        self.default_2 = [self.r * 3, self.h / 2 - self.r]
+        self.default_1 = [self.r * 5, self.h / 2 - self.r]
+        self.part = [self.default_1, self.default_2, self.default_3]
 
     def load(self, game):
         with open(game_file, "r") as f:
             try:
                 data = json.load(f)
-                game.counter = data[len(data) - 3]
-                game.score = data[len(data) - 4]
-                for i in range(len(data[0])):
-                    self.part.append(data[0][i])
+                game.counter, game.score = data[-3], data[-4]
+                self.part = data[0][-3:]
                 if len(self.part) < 3:
                     return
                 self.head_direction()
@@ -196,46 +198,45 @@ class Snake:
                 return
 
     def head_direction(self):
-        self.head_d = self.check_cross_border()
-        if self.head_d != -1:
-            return
-
-        # NOT cross border:
-        # when x_head > x_next_head (RIGHT):
-        if self.part[0][0] > self.part[1][0]:
-            self.head_d = 0
-        # when x_head < x_next_head (LEFT):
-        if self.part[0][0] < self.part[1][0]:
-            self.head_d = 1
-        # when y_head < y_next_head (UP):
-        if self.part[0][1] < self.part[1][1]:
-            self.head_d = 2
-        # when y_head > y_next_head (DOWN):
-        if self.part[0][1] > self.part[1][1]:
-            self.head_d = 3
+        dx = self.part[0][0] - self.part[1][0]
+        dy = self.part[0][1] - self.part[1][1]
+        for direction, (delta_x, delta_y) in self.DIRECTIONS.items():
+            if (delta_x, delta_y) == (dx, dy):
+                self.head_d = direction
+                return
 
     def tail_direction(self):
-        old_size = len(self.part)
-        old_tail = self.part[old_size - 1]
-        old_pre_tail = self.part[old_size - 2]
+        dx = self.part[-1][0] - self.part[-2][0]
+        dy = self.part[-1][1] - self.part[-2][1]
+        for direction, (delta_x, delta_y) in self.DIRECTIONS.items():
+            if (delta_x, delta_y) == (dx, dy):
+                self.tail_d = direction
+                return
 
-        # the tail is moving UP or DOWN:
-        if(old_tail[0] == old_pre_tail[0]):
-            if(old_tail[1] > old_pre_tail[1]):  # up
-                self.tail_d = 2
-            else:
-                self.tail_d = 3
+     def draw_snake(self, game, screen):
+        for i, (x, y) in enumerate(self.part):
+            color = self.color[0] if i == 0 else self.color[1]
+            self.draw(game, screen, color, x, y)
 
-        # the tail is moving LEFT or RIGHT:
-        elif(old_tail[1] == old_pre_tail[1]):
-            if(old_tail[0] > old_pre_tail[0]):  # left
-                self.tail_d = 1
-            else:
-                self.tail_d = 0
-
-    def draw(self, game, screen, color, x=0, y=0):
+    def draw(self, game, screen, color, x, y):
         pygame.draw.circle(game.board, color, (x, y), self.r)
         game.update_screen(screen)
+
+    def move(self, game, screen):
+        self.move_head(game, screen)
+        self.move_tail(game, screen)
+
+    def move_head(self, game, screen):
+        dx, dy = self.DIRECTIONS[self.head_d]
+        x, y = self.part[0]
+        new_head = [x + dx * 2 * self.r, y + dy * 2 * self.r]
+        self.check_coordinate(game, new_head)
+        self.part.insert(0, new_head)
+        self.draw(game, screen, self.color[0], *new_head)
+
+    def move_tail(self, game, screen):
+        self.part.pop()
+        self.draw(game, screen, light_brown, *self.part[-1])
 
     def add_part(self, game, screen, x=0, y=0):
         new_part = [x, y]
